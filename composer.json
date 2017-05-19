@@ -1,0 +1,51 @@
+{
+    "name": "schnittstabil/boilerplate",
+    "type": "project",
+    "description": "Boilerplate to kickstart new composer packages",
+    "license": "MIT",
+    "keywords": [
+        "boilerplate",
+        "skeleton",
+        "template"
+    ],
+    "authors": [
+        {
+            "name": "Michael Mayer",
+            "email": "michael@schnittstabil.de"
+        }
+    ],
+    "autoload": {
+        "files": [
+            "Cuzzy.php"
+        ]
+    },
+    "autoload-dev": {
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "require": {
+        "php": ">=7"
+    },
+    "require-dev": {
+        "schnittstabil/phpunit-starter": "^6.0"
+    },
+    "scripts": {
+        "clean": "rm -rf build/ .php_cs.cache",
+        "lint": [
+            "sugared-rim-cs"
+        ],
+        "test": [
+            "@travis",
+            "@lint"
+        ],
+        "travis": [
+            "tests/usage.php",
+            "schnittstabil-phpunit-starter"
+        ],
+        "post-create-project-cmd": [
+            "php post-create-project-cmd.php",
+            "composer dumpautoload"
+        ]
+    }
+}

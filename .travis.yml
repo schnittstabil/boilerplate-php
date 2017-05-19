@@ -1,0 +1,26 @@
+language: php
+
+php:
+  - 7
+  - 7.1
+  - hhvm
+  - nightly
+
+install:
+  - composer selfupdate
+  - composer install
+  - if [ "$TRAVIS_PHP_VERSION" == "7" ]; then composer global require --update-no-dev sugared-rim/cs codeclimate/php-test-reporter:dev-master satooshi/php-coveralls; fi
+  - export PATH=$PATH:`composer global config bin-dir --absolute`
+
+script:
+  - composer travis
+  - if [ "$TRAVIS_PHP_VERSION" == "7" ]; then composer lint; fi
+
+after_success:
+  - if [ "$TRAVIS_PHP_VERSION" == "7" ]; then coveralls -v; fi
+  - if [ "$TRAVIS_PHP_VERSION" == "7" ]; then vendor/bin/test-reporter; fi
+
+matrix:
+  allow_failures:
+    - php: hhvm
+    - php: nightly
