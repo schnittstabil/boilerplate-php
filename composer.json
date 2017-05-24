@@ -16,7 +16,7 @@
     ],
     "autoload": {
         "files": [
-            "Cuzzy.php"
+            "Curty.php"
         ]
     },
     "autoload-dev": {

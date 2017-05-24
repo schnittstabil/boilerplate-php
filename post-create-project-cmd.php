@@ -17,7 +17,7 @@ $fileInfos = new RecursiveIteratorIterator(
             return !in_array($fileInfo->getFilename(), [
                 '.',
                 '..',
-                'Cuzzy.php',
+                'Curty.php',
                 'composer.lock',
                 '.git',
                 'vendor',
@@ -27,36 +27,55 @@ $fileInfos = new RecursiveIteratorIterator(
 );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ template  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-$cuzzy = new Cuzzy([
+class EnvCurty extends Curty
+{
+    protected function hasValue(string $key) : bool
+    {
+        return getenv($key) !== false || parent::hasValue($key);
+    }
+
+    protected function getValue(string $key) : string
+    {
+        $envValue = getenv($key);
+
+        if ($envValue !== false) {
+            return $envValue;
+        }
+
+        return parent::getValue($key);
+    }
+}
+
+$curty = new EnvCurty([
     'year' => date('Y'),
     'user_name' => trim(`git config user.name` ?: `whoami`),
     'user_email' => trim(`git config user.email`),
     'user_url' =>  trim(`git config user.url`),
-    'user_link' => function ($cuzzy) {
-        if (empty($cuzzy('{{user_url}}'))) {
-            return $cuzzy('{{user_name}}');
+    'user_link' => function ($curty) {
+        if (empty($curty('{{user_url}}'))) {
+            return $curty('{{user_name}}');
         }
 
-        return  $cuzzy('[{{user_name}}](http://{{user_url}})');
+        return  $curty('[{{user_name}}](http://{{user_url}})');
     },
 
     'project_name' => preg_replace('/-php$/', '', basename(__DIR__)),
-    'class_name' => function ($cuzzy) {
-        return str_replace('-', '', ucwords($cuzzy('{{project_name}}'), '-'));
+    'class_name' => function ($curty) {
+        return str_replace('-', '', ucwords($curty('{{project_name}}'), '-'));
     },
     'description' => '{{class_name}}',
     'create_description' => 'Create a {{class_name}}',
-    'object_name' => function ($cuzzy) {
-        return lcfirst($cuzzy('{{class_name}}'));
+    'object_name' => function ($curty) {
+        return lcfirst($curty('{{class_name}}'));
     },
 
     'package' => '{{vendor}}/{{project_name}}',
-    'vendor' => function ($cuzzy) {
-        return strtolower(preg_replace('/[^A-Za-z0-9-]+/', '-', trim($cuzzy('{{user_name}}'))));
+    'vendor' => function ($curty) {
+        return strtolower(preg_replace('/[^A-Za-z0-9-]+/', '-', trim($curty('{{user_name}}'))));
     },
-    'namespace' => function ($cuzzy) {
-        $vendor = str_replace('-', '', ucwords($cuzzy('{{vendor}}'), '-'));
-        return $vendor.'\\'.$cuzzy('{{class_name}}');
+    'namespace' => function ($curty) {
+        $vendor = str_replace('-', '', ucwords($curty('{{vendor}}'), '-'));
+        return $vendor.'\\'.$curty('{{class_name}}');
     },
 
     'sensio_labs_insight' => '[![SensioLabsInsight]({{sensio_labs_insight_url}}/big.png)]({{sensio_labs_insight_url}})',
@@ -75,7 +94,7 @@ $cuzzy = new Cuzzy([
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ apply template ~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 foreach ($fileInfos as $fileInfo) {
-    $newContent = $cuzzy(file_get_contents($fileInfo));
+    $newContent = $curty(file_get_contents($fileInfo));
     file_put_contents($fileInfo, $newContent);
 }
 
@@ -84,18 +103,18 @@ $composer = json_decode(file_get_contents('composer.json'));
 
 unset($composer->scripts->{'post-create-project-cmd'});
 
-$composer->name = $cuzzy('{{package}}');
-$composer->description = $cuzzy('{{description}}');
+$composer->name = $curty('{{package}}');
+$composer->description = $curty('{{description}}');
 $composer->keywords = array_values(array_diff($composer->keywords, ['boilerplate', 'skeleton', 'template']));
 $composer->type = 'library';
-$composer->authors[0]->name = $cuzzy('{{user_name}}');
-$composer->authors[0]->email = $cuzzy('{{user_email}}');
+$composer->authors[0]->name = $curty('{{user_name}}');
+$composer->authors[0]->email = $curty('{{user_email}}');
 $composer->autoload = new stdClass();
 $composer->autoload->{'psr-4'} = new stdClass();
-$composer->autoload->{'psr-4'}->{$cuzzy('{{namespace}}\\')} = 'src';
+$composer->autoload->{'psr-4'}->{$curty('{{namespace}}\\')} = 'src';
 $composer->{'autoload-dev'} = new stdClass();
 $composer->{'autoload-dev'}->{'psr-4'} = new stdClass();
-$composer->{'autoload-dev'}->{'psr-4'}->{$cuzzy('{{namespace}}\\')} = 'tests';
+$composer->{'autoload-dev'}->{'psr-4'}->{$curty('{{namespace}}\\')} = 'tests';
 
 file_put_contents('composer.json', json_encode($composer, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE).PHP_EOL);
 
@@ -110,12 +129,12 @@ foreach ([
 }
 
 foreach ($fileInfos as $fileInfo) {
-    $newPath = $cuzzy((string) $fileInfo);
+    $newPath = $curty((string) $fileInfo);
     if ($newPath !== (string) $fileInfo) {
         rename($fileInfo, $newPath);
     }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ clean up ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-unlink(__DIR__.'/Cuzzy.php');
+unlink(__DIR__.'/Curty.php');
 unlink(__FILE__);
