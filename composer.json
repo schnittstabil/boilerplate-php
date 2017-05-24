@@ -40,8 +40,8 @@
             "@lint"
         ],
         "travis": [
-            "tests/usage.php",
-            "schnittstabil-phpunit-starter"
+            "schnittstabil-phpunit-starter",
+            "tests/usage.php"
         ],
         "post-create-project-cmd": [
             "php post-create-project-cmd.php",
