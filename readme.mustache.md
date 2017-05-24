@@ -20,7 +20,7 @@ use {{namespace}}\{{class_name}};
 // {{create_description}}
 ${{object_name}} = new {{class_name}}();
 
-echo ${{object_name}};
+echo get_class(${{object_name}});
 ```
 
 
