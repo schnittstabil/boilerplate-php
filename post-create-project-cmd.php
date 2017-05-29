@@ -105,10 +105,13 @@ file_put_contents('composer.json', json_encode($composer, JSON_UNESCAPED_SLASHES
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ rename files ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 foreach ([
     '.gitattributes.mustache' => '.gitattributes',
+    'appveyor.mustache.yml' => 'appveyor.yml',
     'license.mustache' => 'license',
     'readme.mustache.md' => 'readme.md',
 ] as $from => $to) {
-    unlink($to);
+    if (file_exists($to)) {
+        unlink($to);
+    }
     rename($from, $to);
 }
 

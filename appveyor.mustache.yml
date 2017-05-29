@@ -1,0 +1,17 @@
+build: false
+
+clone_depth: 1
+clone_folder: C:\projects\{{project_name}}
+
+install:
+  - sc config wuauserv start= auto
+  - net start wuauserv
+  - cinst -y php
+  - cinst -y composer
+  - refreshenv
+  - cd C:\projects\{{project_name}}
+  - composer install --no-interaction
+
+test_script:
+  - cd C:\projects\{{project_name}}
+  - composer run travis
