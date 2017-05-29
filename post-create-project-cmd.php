@@ -6,8 +6,9 @@ use \stdClass;
 use \RecursiveIteratorIterator;
 use \RecursiveCallbackFilterIterator;
 use \RecursiveDirectoryIterator;
+use function Schnittstabil\curty;
 
-require __DIR__.'/vendor/autoload.php';
+require_once __DIR__.'/curty.phar';
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ fileInfos ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 $fileInfos = new RecursiveIteratorIterator(
@@ -17,7 +18,7 @@ $fileInfos = new RecursiveIteratorIterator(
             return !in_array($fileInfo->getFilename(), [
                 '.',
                 '..',
-                'Curty.php',
+                'curty.phar',
                 'composer.lock',
                 '.git',
                 'vendor',
@@ -27,74 +28,56 @@ $fileInfos = new RecursiveIteratorIterator(
 );
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ template  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-class EnvCurty extends Curty
-{
-    protected function hasValue(string $key) : bool
-    {
-        return getenv($key) !== false || parent::hasValue($key);
+$ctx = new stdClass();
+$ctx->year = date('Y');
+$ctx->user_name = trim(`git config user.name` ?: `whoami`);
+$ctx->user_email = trim(`git config user.email`);
+$ctx->user_url =  trim(`git config user.url`);
+$ctx->user_link = function ($ctx) {
+    if (empty(curty('{{user_url}}', $ctx))) {
+        return curty('{{user_name}}', $ctx);
     }
 
-    protected function getValue(string $key) : string
-    {
-        $envValue = getenv($key);
+    return  curty('[{{user_name}}](http://{{user_url}})', $ctx);
+};
 
-        if ($envValue !== false) {
-            return $envValue;
-        }
+$ctx->project_name = preg_replace('/-php$/', '', basename(__DIR__));
+$ctx->class_name = function ($ctx) {
+        return str_replace('-', '', ucwords(curty('{{project_name}}', $ctx), '-'));
+    };
+$ctx->description = '{{class_name}}';
+$ctx->create_description = 'Create a {{class_name}}';
+$ctx->object_name = function ($ctx) {
+    return lcfirst(curty('{{class_name}}', $ctx));
+};
 
-        return parent::getValue($key);
-    }
-}
+$ctx->package = '{{vendor}}/{{project_name}}';
+$ctx->vendor = function ($ctx) {
+    return strtolower(preg_replace('/[^A-Za-z0-9-]+/', '-', trim(curty('{{user_name}}', $ctx))));
+};
+$ctx->namespace = function ($ctx) {
+    $vendor = str_replace('-', '', ucwords(curty('{{vendor}}', $ctx), '-'));
+    return $vendor.'\\'.curty('{{class_name}}', $ctx);
+};
 
-$curty = new EnvCurty([
-    'year' => date('Y'),
-    'user_name' => trim(`git config user.name` ?: `whoami`),
-    'user_email' => trim(`git config user.email`),
-    'user_url' =>  trim(`git config user.url`),
-    'user_link' => function ($curty) {
-        if (empty($curty('{{user_url}}'))) {
-            return $curty('{{user_name}}');
-        }
+$ctx->sensio_labs_insight = '[![SensioLabsInsight]({{sensio_labs_insight_url}}/big.png)]({{sensio_labs_insight_url}})';
+$ctx->sensio_labs_insight_url = 'https://insight.sensiolabs.com/projects/{{your_project_id}}';
 
-        return  $curty('[{{user_name}}](http://{{user_url}})');
-    },
+$ctx->travis = '[![Build Status]({{travis_url}}.svg?branch=master)]({{travis_url}})';
+$ctx->travis_url = 'https://travis-ci.org/{{vendor}}/{{project_name}}';
 
-    'project_name' => preg_replace('/-php$/', '', basename(__DIR__)),
-    'class_name' => function ($curty) {
-        return str_replace('-', '', ucwords($curty('{{project_name}}'), '-'));
-    },
-    'description' => '{{class_name}}',
-    'create_description' => 'Create a {{class_name}}',
-    'object_name' => function ($curty) {
-        return lcfirst($curty('{{class_name}}'));
-    },
+$ctx->coveralls = '[![Coverage Status](https://coveralls.io/repos/{{vendor}}/{{project_name}}/badge.svg?branch=master&service=github)](https://coveralls.io/github/{{vendor}}/{{project_name}}?branch=master)';
 
-    'package' => '{{vendor}}/{{project_name}}',
-    'vendor' => function ($curty) {
-        return strtolower(preg_replace('/[^A-Za-z0-9-]+/', '-', trim($curty('{{user_name}}'))));
-    },
-    'namespace' => function ($curty) {
-        $vendor = str_replace('-', '', ucwords($curty('{{vendor}}'), '-'));
-        return $vendor.'\\'.$curty('{{class_name}}');
-    },
+$ctx->codeclimate = '[![Code Climate](https://codeclimate.com/github/{{vendor}}/{{project_name}}/badges/gpa.svg)](https://codeclimate.com/github/{{vendor}}/{{project_name}})';
 
-    'sensio_labs_insight' => '[![SensioLabsInsight]({{sensio_labs_insight_url}}/big.png)]({{sensio_labs_insight_url}})',
-    'sensio_labs_insight_url' => 'https://insight.sensiolabs.com/projects/{{your_project_id}}',
+$ctx->scrutinizer = '[![Scrutinizer Code Quality]({{scrutinizer_url}}/badges/quality-score.png?b=master)]({{scrutinizer_url}}/?branch=master)';
+$ctx->scrutinizer_url = 'https://scrutinizer-ci.com/g/{{vendor}}/{{project_name}}';
 
-    'travis' => '[![Build Status]({{travis_url}}.svg?branch=master)]({{travis_url}})',
-    'travis_url' => 'https://travis-ci.org/{{vendor}}/{{project_name}}',
-
-    'coveralls' => '[![Coverage Status](https://coveralls.io/repos/{{vendor}}/{{project_name}}/badge.svg?branch=master&service=github)](https://coveralls.io/github/{{vendor}}/{{project_name}}?branch=master)',
-
-    'codeclimate' => '[![Code Climate](https://codeclimate.com/github/{{vendor}}/{{project_name}}/badges/gpa.svg)](https://codeclimate.com/github/{{vendor}}/{{project_name}})',
-
-    'scrutinizer' => '[![Scrutinizer Code Quality]({{scrutinizer_url}}/badges/quality-score.png?b=master)]({{scrutinizer_url}}/?branch=master)',
-    'scrutinizer_url' => 'https://scrutinizer-ci.com/g/{{vendor}}/{{project_name}}',
-]);
+$ctx = array_merge((array) $ctx, $_SERVER);
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ apply template ~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 foreach ($fileInfos as $fileInfo) {
-    $newContent = $curty(file_get_contents($fileInfo));
+    $newContent = curty(file_get_contents($fileInfo), $ctx);
     file_put_contents($fileInfo, $newContent);
 }
 
@@ -102,19 +85,20 @@ foreach ($fileInfos as $fileInfo) {
 $composer = json_decode(file_get_contents('composer.json'));
 
 unset($composer->scripts->{'post-create-project-cmd'});
+unset($composer->scripts->{'install-curty'});
 
-$composer->name = $curty('{{package}}');
-$composer->description = $curty('{{description}}');
+$composer->name = curty('{{package}}', $ctx);
+$composer->description = curty('{{description}}', $ctx);
 $composer->keywords = array_values(array_diff($composer->keywords, ['boilerplate', 'skeleton', 'template']));
 $composer->type = 'library';
-$composer->authors[0]->name = $curty('{{user_name}}');
-$composer->authors[0]->email = $curty('{{user_email}}');
+$composer->authors[0]->name = curty('{{user_name}}', $ctx);
+$composer->authors[0]->email = curty('{{user_email}}', $ctx);
 $composer->autoload = new stdClass();
 $composer->autoload->{'psr-4'} = new stdClass();
-$composer->autoload->{'psr-4'}->{$curty('{{namespace}}\\')} = 'src';
+$composer->autoload->{'psr-4'}->{curty('{{namespace}}\\', $ctx)} = 'src';
 $composer->{'autoload-dev'} = new stdClass();
 $composer->{'autoload-dev'}->{'psr-4'} = new stdClass();
-$composer->{'autoload-dev'}->{'psr-4'}->{$curty('{{namespace}}\\')} = 'tests';
+$composer->{'autoload-dev'}->{'psr-4'}->{curty('{{namespace}}\\', $ctx)} = 'tests';
 
 file_put_contents('composer.json', json_encode($composer, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE).PHP_EOL);
 
@@ -129,12 +113,12 @@ foreach ([
 }
 
 foreach ($fileInfos as $fileInfo) {
-    $newPath = $curty((string) $fileInfo);
+    $newPath = curty((string) $fileInfo, $ctx);
     if ($newPath !== (string) $fileInfo) {
         rename($fileInfo, $newPath);
     }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ clean up ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-unlink(__DIR__.'/Curty.php');
+unlink(__DIR__.'/curty.phar');
 unlink(__FILE__);

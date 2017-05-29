@@ -46,6 +46,10 @@
         "post-create-project-cmd": [
             "php post-create-project-cmd.php",
             "composer dumpautoload"
+        ],
+        "install-curty": [
+            "rm -f curty.phar",
+            "curl -LO https://github.com/schnittstabil/curty/releases/download/0.1.0/curty.phar"
         ]
     }
 }
